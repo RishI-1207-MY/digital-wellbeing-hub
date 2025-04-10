@@ -1,25 +1,17 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { Send, Plus, Loader2 } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { supabase } from '@/integrations/supabase/client';
+import { Plus } from 'lucide-react';
+import ChatMessageList from './ChatMessageList';
+import ChatInput from './ChatInput';
+import { Message } from './types';
+import { callAiChatFunction, saveChatMessage } from './chatService';
 
-interface Message {
-  id?: string;
-  content: string;
-  is_bot: boolean;
-  created_at?: string;
-}
-
-const HealthChatbot = () => {
+const HealthChatbot: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -31,54 +23,45 @@ const HealthChatbot = () => {
     };
     setMessages([welcomeMessage]);
 
-    // Load chat history from Supabase is skipped for now due to TS errors
-    // We'll just use local state for the chat
+    // Load chat history from Supabase is skipped for now
   }, []);
 
-  useEffect(() => {
-    // Scroll to bottom when messages change
-    scrollToBottom();
-  }, [messages]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
-
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!input.trim()) return;
-    
+  const handleSendMessage = async (inputText: string) => {
     try {
       setLoading(true);
 
       // Add user message to state
       const userMessage: Message = {
-        content: input,
+        content: inputText,
         is_bot: false,
         created_at: new Date().toISOString()
       };
       
       setMessages(prev => [...prev, userMessage]);
-      setInput('');
+
+      // Save user message (commented out due to TS errors)
+      // await saveChatMessage({
+      //   content: inputText,
+      //   is_bot: false,
+      // });
 
       // Call the AI edge function
-      const { data, error } = await supabase.functions.invoke('ai-chat', {
-        body: { message: input }
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
+      const aiResponse = await callAiChatFunction(inputText);
 
       // Add bot response to state
       const botResponse: Message = {
-        content: data.reply,
+        content: aiResponse,
         is_bot: true,
         created_at: new Date().toISOString()
       };
       
       setMessages(prev => [...prev, botResponse]);
+
+      // Save bot message (commented out due to TS errors)
+      // await saveChatMessage({
+      //   content: aiResponse,
+      //   is_bot: true,
+      // });
     } catch (error: any) {
       console.error('Error sending message:', error);
       toast({
@@ -136,57 +119,10 @@ const HealthChatbot = () => {
         </div>
       </CardHeader>
       <CardContent className="flex-grow overflow-y-auto mb-4">
-        <div className="space-y-4">
-          {messages.map((message, index) => (
-            <div 
-              key={index} 
-              className={`flex ${message.is_bot ? 'justify-start' : 'justify-end'}`}
-            >
-              <div className={`flex ${message.is_bot ? 'items-start' : 'items-end'} gap-2 max-w-[80%]`}>
-                {message.is_bot && (
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder.svg" />
-                    <AvatarFallback className="bg-blue-500 text-white">MB</AvatarFallback>
-                  </Avatar>
-                )}
-                <div 
-                  className={`p-3 rounded-lg ${
-                    message.is_bot 
-                      ? 'bg-gray-100 text-gray-900' 
-                      : 'bg-blue-500 text-white'
-                  }`}
-                >
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                </div>
-                {!message.is_bot && (
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder.svg" />
-                    <AvatarFallback className="bg-gray-500 text-white">You</AvatarFallback>
-                  </Avatar>
-                )}
-              </div>
-            </div>
-          ))}
-          <div ref={messagesEndRef} />
-        </div>
+        <ChatMessageList messages={messages} />
       </CardContent>
       <CardFooter className="pt-0">
-        <form onSubmit={handleSendMessage} className="flex w-full gap-2">
-          <Input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type your health question..."
-            disabled={loading}
-            className="flex-grow"
-          />
-          <Button type="submit" disabled={loading || !input.trim()}>
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </form>
+        <ChatInput onSendMessage={handleSendMessage} loading={loading} />
       </CardFooter>
     </Card>
   );
