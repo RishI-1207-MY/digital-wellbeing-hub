@@ -5,7 +5,7 @@ import EnhancedSymptomChecker from './EnhancedSymptomChecker';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Bell, MessageCircle, Video, Pill } from 'lucide-react';
+import { Bell, MessageCircle, Video, Pill, Calendar, FileUp } from 'lucide-react';
 
 // Mock medication data
 const medications = [
@@ -41,10 +41,26 @@ const PatientDashboard = () => {
   };
 
   const startVideoConsultation = () => {
-    // In a full implementation, this would navigate to the video consultation tab
-    const consultationTab = document.querySelector('[data-state="inactive"][data-value="consultation"]');
+    // Navigate to the video consultation tab
+    const consultationTab = document.querySelector('[data-value="consultation"]');
     if (consultationTab && consultationTab instanceof HTMLElement) {
       consultationTab.click();
+    }
+  };
+
+  const goToAppointments = () => {
+    // Navigate to the appointments tab
+    const appointmentsTab = document.querySelector('[data-value="appointments"]');
+    if (appointmentsTab && appointmentsTab instanceof HTMLElement) {
+      appointmentsTab.click();
+    }
+  };
+
+  const goToReports = () => {
+    // Navigate to the medical reports tab
+    const reportsTab = document.querySelector('[data-value="reports"]');
+    if (reportsTab && reportsTab instanceof HTMLElement) {
+      reportsTab.click();
     }
   };
 
@@ -110,6 +126,49 @@ const PatientDashboard = () => {
               onClick={startVideoConsultation}
             >
               Start Consultation
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* New Feature Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="bg-green-50 border-green-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center text-green-700">
+              <Calendar className="mr-2 h-5 w-5" />
+              Book Appointment
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-green-600 mb-4">
+              Schedule an appointment with one of our healthcare providers
+            </p>
+            <Button 
+              className="w-full bg-green-600 hover:bg-green-700"
+              onClick={goToAppointments}
+            >
+              Book Now
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-amber-50 border-amber-100">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center text-amber-700">
+              <FileUp className="mr-2 h-5 w-5" />
+              Upload Medical Reports
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-amber-600 mb-4">
+              Share your medical reports securely with your healthcare provider
+            </p>
+            <Button 
+              className="w-full bg-amber-600 hover:bg-amber-700"
+              onClick={goToReports}
+            >
+              Upload Reports
             </Button>
           </CardContent>
         </Card>

@@ -6,6 +6,8 @@ import DoctorDashboard from './DoctorDashboard';
 import HealthChatbot from '@/components/chat/HealthChatbot';
 import VideoConsultation from '@/components/consultation/VideoConsultation';
 import EnhancedSymptomChecker from './EnhancedSymptomChecker';
+import AppointmentBooking from '@/components/appointments/AppointmentBooking';
+import MedicalReportUpload from '@/components/reports/MedicalReportUpload';
 
 interface DashboardTabsProps {
   userRole: 'doctor' | 'patient';
@@ -24,6 +26,8 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({ userRole }) => {
           <TabsTrigger value="chat">AI Health Assistant</TabsTrigger>
           <TabsTrigger value="consultation">Video Consultation</TabsTrigger>
           <TabsTrigger value="symptom-checker">Symptom Checker</TabsTrigger>
+          <TabsTrigger value="appointments">Appointments</TabsTrigger>
+          <TabsTrigger value="reports">Medical Reports</TabsTrigger>
         </TabsList>
         
         <TabsContent value="dashboard">
@@ -40,6 +44,14 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({ userRole }) => {
         
         <TabsContent value="symptom-checker">
           <EnhancedSymptomChecker />
+        </TabsContent>
+        
+        <TabsContent value="appointments">
+          <AppointmentBooking />
+        </TabsContent>
+        
+        <TabsContent value="reports">
+          <MedicalReportUpload />
         </TabsContent>
       </Tabs>
     </>

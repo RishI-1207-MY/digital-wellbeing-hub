@@ -4,8 +4,8 @@ import { Message } from './types';
 
 export const fetchMessagesFromSupabase = async (): Promise<Message[]> => {
   try {
-    // Note: This is commented out to avoid TypeScript errors, as the database
-    // might not be connected or properly typed
+    // For now, we'll return mock data
+    // In a production environment, uncomment the supabase query
     /*
     const { data, error } = await supabase
       .from('chat_messages')
@@ -16,7 +16,7 @@ export const fetchMessagesFromSupabase = async (): Promise<Message[]> => {
     return data as Message[];
     */
     
-    // Return an empty array or mock data for now
+    // Return an empty array for now
     return [];
   } catch (error) {
     console.error('Error fetching messages:', error);
@@ -26,7 +26,8 @@ export const fetchMessagesFromSupabase = async (): Promise<Message[]> => {
 
 export const saveChatMessage = async (message: Omit<Message, 'id' | 'created_at'>): Promise<Message | null> => {
   try {
-    // Note: This is commented out to avoid TypeScript errors
+    // For now, we'll mock saving a message
+    // In a production environment, uncomment the supabase query
     /*
     const { data, error } = await supabase
       .from('chat_messages')
@@ -56,22 +57,27 @@ export const saveChatMessage = async (message: Omit<Message, 'id' | 'created_at'
 
 export const callAiChatFunction = async (message: string): Promise<string> => {
   try {
+    // Call the enhanced AI edge function
     const { data, error } = await supabase.functions.invoke('ai-chat', {
       body: { message }
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error calling AI function:', error);
+      throw error;
+    }
+    
     return data.reply;
   } catch (error) {
     console.error('Error calling AI function:', error);
     
-    // Fallback responses if the AI service is unavailable
+    // Enhanced fallback responses if the AI service is unavailable
     const fallbackResponses = [
-      "I'm MediBot, your healthcare assistant. I'm having trouble connecting to my knowledge base right now. Please try again later.",
-      "I apologize, but I'm experiencing technical difficulties. This would be a good time to consult with a healthcare professional directly.",
-      "My systems are currently undergoing maintenance. Please check back soon for health information.",
-      "I'm unable to process your request right now. For urgent health concerns, please contact your doctor.",
-      "Technical difficulties are preventing me from giving you a proper response. Thank you for your patience."
+      "I'm MediBot, your healthcare assistant. I can help with general health information, booking appointments, or uploading medical reports. How can I assist you today?",
+      "I apologize, but I'm experiencing technical difficulties. In the meantime, you can use our appointment booking feature to schedule a consultation with a healthcare professional.",
+      "My systems are currently undergoing maintenance. You can still upload your medical reports or book an appointment through the respective tabs in your dashboard.",
+      "I'm unable to process your request right now. For health concerns, please consider using our symptom checker or booking a video consultation with a doctor.",
+      "Technical difficulties are preventing me from giving you a proper response. You can access our appointment booking and medical report upload features from the dashboard tabs."
     ];
     
     return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
