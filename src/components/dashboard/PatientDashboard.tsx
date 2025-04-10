@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import VitalsDisplay from './VitalsDisplay';
-import SymptomChecker from './SymptomChecker';
+import EnhancedSymptomChecker from './EnhancedSymptomChecker';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
@@ -41,10 +41,8 @@ const PatientDashboard = () => {
   };
 
   const startVideoConsultation = () => {
-    toast({
-      title: "Video Consultation",
-      description: "This feature is coming soon. You'll be able to connect with healthcare providers via video.",
-    });
+    // In a full implementation, this would navigate to the video consultation tab
+    document.querySelector('[data-state="inactive"][data-value="consultation"]')?.click();
   };
 
   return (
@@ -153,8 +151,8 @@ const PatientDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Symptom Checker */}
-        <SymptomChecker />
+        {/* Use the updated symptom checker instead of the original one */}
+        <EnhancedSymptomChecker />
       </div>
     </div>
   );

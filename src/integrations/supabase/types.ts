@@ -9,7 +9,93 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_bot: boolean
+          user_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_bot?: boolean
+          user_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_bot?: boolean
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      consultations: {
+        Row: {
+          created_at: string
+          doctor_id: string | null
+          ended_at: string | null
+          id: string
+          joined_at: string | null
+          notes: string | null
+          patient_id: string
+          scheduled_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          doctor_id?: string | null
+          ended_at?: string | null
+          id?: string
+          joined_at?: string | null
+          notes?: string | null
+          patient_id: string
+          scheduled_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          doctor_id?: string | null
+          ended_at?: string | null
+          id?: string
+          joined_at?: string | null
+          notes?: string | null
+          patient_id?: string
+          scheduled_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      disease_predictions: {
+        Row: {
+          confidence: number
+          created_at: string
+          id: string
+          prediction: string
+          recommendation: string
+          symptoms: string[]
+        }
+        Insert: {
+          confidence: number
+          created_at?: string
+          id?: string
+          prediction: string
+          recommendation: string
+          symptoms: string[]
+        }
+        Update: {
+          confidence?: number
+          created_at?: string
+          id?: string
+          prediction?: string
+          recommendation?: string
+          symptoms?: string[]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -6,6 +6,11 @@ import { useToast } from '@/components/ui/use-toast';
 import { LogOut, Menu, X } from 'lucide-react';
 import PatientDashboard from '@/components/dashboard/PatientDashboard';
 import DoctorDashboard from '@/components/dashboard/DoctorDashboard';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import HealthChatbot from '@/components/chat/HealthChatbot';
+import VideoConsultation from '@/components/consultation/VideoConsultation';
+import EnhancedSymptomChecker from '@/components/dashboard/EnhancedSymptomChecker';
+import { supabase } from '@/integrations/supabase/client';
 
 type User = {
   email: string;
@@ -22,25 +27,58 @@ const Dashboard = () => {
 
   useEffect(() => {
     // Check if user is logged in
-    const storedUser = localStorage.getItem('user');
-    if (!storedUser) {
-      navigate('/login');
-      return;
-    }
-
-    // Parse user data
-    try {
-      const parsedUser = JSON.parse(storedUser);
-      setUser(parsedUser);
-    } catch (error) {
-      console.error('Failed to parse user data', error);
-      navigate('/login');
-    } finally {
+    const checkAuth = async () => {
+      const { data } = await supabase.auth.getSession();
+      
+      if (!data.session) {
+        navigate('/login');
+        return;
+      }
+      
+      // Get user data from localStorage (in a real app, this would come from a database)
+      const storedUser = localStorage.getItem('user');
+      
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+        } catch (error) {
+          console.error('Failed to parse user data', error);
+          navigate('/login');
+        }
+      } else {
+        // If no user data in localStorage, create mock data based on email
+        const email = data.session.user.email || '';
+        const mockUser = {
+          email: email,
+          role: email.includes('doctor') ? 'doctor' : 'patient',
+          name: email.split('@')[0]
+        };
+        
+        localStorage.setItem('user', JSON.stringify(mockUser));
+        setUser(mockUser);
+      }
+      
       setLoading(false);
-    }
+    };
+    
+    checkAuth();
+    
+    // Set up auth state change listener
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        localStorage.removeItem('user');
+        navigate('/login');
+      }
+    });
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, [navigate]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     localStorage.removeItem('user');
     toast({
       title: "Logged out successfully",
@@ -202,13 +240,36 @@ const Dashboard = () => {
           </div>
         </header>
         
-        {/* Dashboard Content */}
+        {/* Dashboard Content with Tabs */}
         <main className="flex-1 overflow-y-auto bg-gray-100 p-4 md:p-6">
           <h1 className="text-2xl font-bold mb-6">
             {user?.role === 'doctor' ? 'Provider Dashboard' : 'Patient Dashboard'}
           </h1>
           
-          {user?.role === 'doctor' ? <DoctorDashboard /> : <PatientDashboard />}
+          <Tabs defaultValue="dashboard">
+            <TabsList className="mb-6 bg-white">
+              <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+              <TabsTrigger value="chat">AI Health Assistant</TabsTrigger>
+              <TabsTrigger value="consultation">Video Consultation</TabsTrigger>
+              <TabsTrigger value="symptom-checker">Symptom Checker</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="dashboard">
+              {user?.role === 'doctor' ? <DoctorDashboard /> : <PatientDashboard />}
+            </TabsContent>
+            
+            <TabsContent value="chat">
+              <HealthChatbot />
+            </TabsContent>
+            
+            <TabsContent value="consultation">
+              <VideoConsultation />
+            </TabsContent>
+            
+            <TabsContent value="symptom-checker">
+              <EnhancedSymptomChecker />
+            </TabsContent>
+          </Tabs>
         </main>
       </div>
     </div>
