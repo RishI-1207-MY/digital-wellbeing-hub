@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Loader2, Phone, PhoneOff, Mic, MicOff, Video, VideoOff } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import Peer from 'simple-peer';
+// Remove simple-peer import as we'll use a simpler approach
 
 interface User {
   id: string;
@@ -33,7 +33,7 @@ const VideoConsultation = () => {
   
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const peerRef = useRef<any>(null);
+  // Remove peerRef as we're not using simple-peer
   const streamRef = useRef<MediaStream | null>(null);
   
   const { toast } = useToast();
@@ -52,48 +52,24 @@ const VideoConsultation = () => {
           return;
         }
 
-        // Hardcoded user role for demo - in a real app, this would come from a user profile
+        // Hardcoded user role for demo
         setUser({
           id: session.user.id,
           name: session.user.email || 'User',
           role: 'patient' // Assuming patient role for demo
         });
 
-        // For demo, create a mock consultation if none exists
-        const { data: existingConsultations, error: fetchError } = await supabase
-          .from('consultations')
-          .select('*')
-          .eq('patient_id', session.user.id)
-          .eq('status', 'scheduled')
-          .maybeSingle();
-
-        if (fetchError) {
-          console.error('Error fetching consultations:', fetchError);
-          throw fetchError;
-        }
-
-        if (existingConsultations) {
-          setConsultation(existingConsultations);
-        } else {
-          // Create a demo consultation
-          const { data: newConsultation, error: createError } = await supabase
-            .from('consultations')
-            .insert({
-              patient_id: session.user.id,
-              doctor_id: null, // Will be assigned later
-              status: 'scheduled',
-              scheduled_at: new Date().toISOString()
-            })
-            .select('*')
-            .single();
-
-          if (createError) {
-            console.error('Error creating consultation:', createError);
-            throw createError;
-          }
-
-          setConsultation(newConsultation);
-        }
+        // For demo, create a mock consultation
+        const mockConsultation: ConsultationData = {
+          id: 'mock-consultation-id',
+          patient_id: session.user.id,
+          doctor_id: null,
+          status: 'scheduled',
+          scheduled_at: new Date().toISOString()
+        };
+        
+        setConsultation(mockConsultation);
+        setLoading(false);
       } catch (error) {
         console.error('Error in consultation setup:', error);
         toast({
@@ -101,7 +77,6 @@ const VideoConsultation = () => {
           description: "Failed to set up consultation. Please try again later.",
           variant: "destructive",
         });
-      } finally {
         setLoading(false);
       }
     };
@@ -112,9 +87,6 @@ const VideoConsultation = () => {
       // Clean up media stream when component unmounts
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
-      }
-      if (peerRef.current) {
-        peerRef.current.destroy();
       }
     };
   }, [toast]);
@@ -134,22 +106,6 @@ const VideoConsultation = () => {
       // Display local video
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream;
-      }
-
-      // Update consultation status
-      if (consultation) {
-        const { error } = await supabase
-          .from('consultations')
-          .update({ 
-            status: 'in-progress',
-            joined_at: new Date().toISOString()
-          })
-          .eq('id', consultation.id);
-
-        if (error) {
-          console.error('Error updating consultation status:', error);
-          throw error;
-        }
       }
 
       // For demo purposes, we're simulating a peer connection
@@ -186,27 +142,6 @@ const VideoConsultation = () => {
       // Stop media tracks
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
-      }
-
-      // Clean up peer connection
-      if (peerRef.current) {
-        peerRef.current.destroy();
-      }
-
-      // Update consultation status
-      if (consultation) {
-        const { error } = await supabase
-          .from('consultations')
-          .update({ 
-            status: 'completed',
-            ended_at: new Date().toISOString()
-          })
-          .eq('id', consultation.id);
-
-        if (error) {
-          console.error('Error updating consultation status:', error);
-          throw error;
-        }
       }
 
       setIsConnected(false);

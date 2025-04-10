@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -41,7 +40,7 @@ const Dashboard = () => {
       if (storedUser) {
         try {
           const parsedUser = JSON.parse(storedUser);
-          setUser(parsedUser);
+          setUser(parsedUser as User);
         } catch (error) {
           console.error('Failed to parse user data', error);
           navigate('/login');
@@ -49,7 +48,7 @@ const Dashboard = () => {
       } else {
         // If no user data in localStorage, create mock data based on email
         const email = data.session.user.email || '';
-        const mockUser = {
+        const mockUser: User = {
           email: email,
           role: email.includes('doctor') ? 'doctor' : 'patient',
           name: email.split('@')[0]

@@ -42,7 +42,10 @@ const PatientDashboard = () => {
 
   const startVideoConsultation = () => {
     // In a full implementation, this would navigate to the video consultation tab
-    document.querySelector('[data-state="inactive"][data-value="consultation"]')?.click();
+    const consultationTab = document.querySelector('[data-state="inactive"][data-value="consultation"]');
+    if (consultationTab && consultationTab instanceof HTMLElement) {
+      consultationTab.click();
+    }
   };
 
   return (

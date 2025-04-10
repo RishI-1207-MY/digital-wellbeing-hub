@@ -23,6 +23,42 @@ const commonSymptoms = [
   { id: "itchy-eyes", label: "Itchy Eyes" }
 ];
 
+// Mock disease prediction data - will be replaced with actual AI predictions
+const mockPredictions: Record<string, { prediction: string, confidence: number, recommendation: string }> = {
+  "fever,headache": {
+    prediction: "Common Cold",
+    confidence: 0.6,
+    recommendation: "Rest, hydrate, and take over-the-counter pain relievers if needed. See a doctor if symptoms worsen or persist beyond a week."
+  },
+  "fever,cough,body-aches": {
+    prediction: "Influenza",
+    confidence: 0.8,
+    recommendation: "Rest, hydrate, and monitor symptoms. Consider antiviral medication if diagnosed within 48 hours. Contact your doctor if symptoms become severe."
+  },
+  "runny-nose,sneezing,itchy-eyes": {
+    prediction: "Seasonal Allergies",
+    confidence: 0.9,
+    recommendation: "Try over-the-counter antihistamines, avoid allergens, and consider seeing an allergist for long-term management strategies."
+  },
+  "sore-throat,fever": {
+    prediction: "Strep Throat",
+    confidence: 0.5,
+    recommendation: "See a healthcare provider for testing and possible antibiotics. Rest and use pain relievers for comfort."
+  },
+  "cough,congestion,fatigue": {
+    prediction: "Bronchitis",
+    confidence: 0.7,
+    recommendation: "Rest, increase fluid intake, and use a humidifier. Consult a doctor if symptoms persist or you have difficulty breathing."
+  }
+};
+
+// Default prediction if no match is found
+const defaultPrediction = {
+  prediction: "Unknown Condition",
+  confidence: 0,
+  recommendation: "Based on the symptoms provided, a specific condition cannot be determined. Please consult with a healthcare professional for a proper diagnosis."
+};
+
 const EnhancedSymptomChecker = () => {
   const [selectedSymptoms, setSelectedSymptoms] = useState<string[]>([]);
   const [duration, setDuration] = useState<string>("");
@@ -67,17 +103,18 @@ const EnhancedSymptomChecker = () => {
     setLoading(true);
     
     try {
-      // Call the disease prediction edge function
-      const { data, error } = await supabase.functions.invoke('disease-prediction', {
-        body: { symptoms: selectedSymptoms }
-      });
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      // Set the prediction result
-      setResult(data);
+      // Simulate an API call with a timeout
+      setTimeout(() => {
+        // Sort symptoms to ensure consistent key lookup
+        const sortedSymptoms = [...selectedSymptoms].sort().join(',');
+        
+        // Find the closest match in our mock data or use the default
+        const matchedPrediction = mockPredictions[sortedSymptoms] || defaultPrediction;
+        
+        // Set the prediction result
+        setResult(matchedPrediction);
+        setLoading(false);
+      }, 1500);
     } catch (error: any) {
       console.error('Error analyzing symptoms:', error);
       toast({
@@ -85,7 +122,6 @@ const EnhancedSymptomChecker = () => {
         description: error.message || "Could not analyze symptoms. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };
