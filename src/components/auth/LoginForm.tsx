@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 const LoginForm = () => {
   const [email, setEmail] = useState('');
@@ -19,31 +20,25 @@ const LoginForm = () => {
     setIsLoading(true);
 
     try {
-      // Simulate API call with timeout
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       
-      // Temporary mock login logic
-      const mockUsers = [
-        { email: 'patient@example.com', password: 'password123', role: 'patient' },
-        { email: 'doctor@example.com', password: 'password123', role: 'doctor' }
-      ];
+      if (error) throw error;
       
-      const user = mockUsers.find(user => user.email === email && user.password === password);
-      
-      if (user) {
-        localStorage.setItem('user', JSON.stringify({ email: user.email, role: user.role }));
+      if (data.user) {
         toast({
           title: "Login successful",
-          description: `Welcome back, ${user.role === 'doctor' ? 'Dr.' : ''} ${email.split('@')[0]}!`,
+          description: `Welcome back!`,
         });
         navigate('/dashboard');
-      } else {
-        throw new Error('Invalid credentials');
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Login error:', error);
       toast({
         title: "Login failed",
-        description: "Invalid email or password. Please try again.",
+        description: error.message || "Invalid email or password. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -95,11 +90,6 @@ const LoginForm = () => {
             <Link to="/register" className="font-medium text-lifesage-primary hover:underline">
               Sign up
             </Link>
-          </div>
-          <div className="text-sm text-center text-gray-500 mt-3">
-            Demo accounts: <br />
-            patient@example.com / password123 <br />
-            doctor@example.com / password123
           </div>
         </form>
       </CardContent>

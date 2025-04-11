@@ -8,64 +8,29 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/components/ui/use-toast';
 import { Search, UserCircle, Video, FileText, Bell, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
-// Mock patient data (would be replaced with Supabase data in a real app)
-const patients = [
-  { 
-    id: 1, 
-    name: "Sarah Johnson", 
-    age: 42, 
-    lastVisit: "2025-03-15",
-    status: "stable",
-    alerts: [],
-    conditions: ["Hypertension", "Type 2 Diabetes"]
-  },
-  { 
-    id: 2, 
-    name: "Michael Chen", 
-    age: 35, 
-    lastVisit: "2025-04-01",
-    status: "follow-up",
-    alerts: [],
-    conditions: ["Asthma"]
-  },
-  { 
-    id: 3, 
-    name: "Robert Garcia", 
-    age: 67, 
-    lastVisit: "2025-03-28",
-    status: "critical",
-    alerts: ["Irregular heartbeat detected"],
-    conditions: ["Coronary Artery Disease", "Hypertension"]
-  },
-  { 
-    id: 4, 
-    name: "Emily Martinez", 
-    age: 29, 
-    lastVisit: "2025-02-22",
-    status: "stable",
-    alerts: [],
-    conditions: ["Anxiety", "Migraines"]
-  },
-  { 
-    id: 5, 
-    name: "James Wilson", 
-    age: 58, 
-    lastVisit: "2025-04-05",
-    status: "emergency",
-    alerts: ["Emergency alert triggered 10 minutes ago"],
-    conditions: ["COPD", "Hypertension"]
-  }
-];
+interface Patient {
+  id: string;
+  profile_id: string;
+  full_name: string;
+  date_of_birth: string | null;
+  medical_history: string | null;
+  status?: 'stable' | 'follow-up' | 'critical' | 'emergency';
+  alerts?: string[];
+  conditions?: string[];
+}
 
-// Mock appointments data (would be replaced with Supabase data in a real app)
-const appointments = [
-  { id: 1, patient: "Sarah Johnson", type: "Follow-up", time: "10:00 AM", date: "2025-04-10", status: "upcoming" },
-  { id: 2, patient: "Robert Garcia", type: "Medication Review", time: "11:30 AM", date: "2025-04-10", status: "upcoming" },
-  { id: 3, patient: "Emily Martinez", type: "Annual Physical", time: "2:15 PM", date: "2025-04-10", status: "upcoming" },
-  { id: 4, patient: "Michael Chen", type: "Lab Results", time: "4:00 PM", date: "2025-04-10", status: "upcoming" },
-  { id: 5, patient: "James Wilson", type: "Emergency Consultation", time: "Now", date: "2025-04-10", status: "active" }
-];
+interface Appointment {
+  id: string;
+  patient_id: string;
+  patient_name: string;
+  appointment_date: string;
+  appointment_time: string;
+  reason: string;
+  status: string;
+  notes: string | null;
+}
 
 interface DoctorDashboardProps {
   activeTab?: 'dashboard' | 'patients';
@@ -73,34 +38,133 @@ interface DoctorDashboardProps {
 
 const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ activeTab = 'dashboard' }) => {
   const [searchTerm, setSearchTerm] = useState("");
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
-  const [registeredPatients, setRegisteredPatients] = useState<any[]>([]);
+  const { user } = useAuth();
   
-  // Fetch registered patients from Supabase (in a real app)
+  // Fetch patients data
   useEffect(() => {
-    const fetchRegisteredPatients = async () => {
+    const fetchPatients = async () => {
+      if (!user?.id) return;
+      
       try {
-        // This would be implemented in a real app with actual Supabase queries
-        // const { data, error } = await supabase
-        //   .from('profiles')
-        //   .select('*')
-        //   .eq('role', 'patient');
+        const { data, error } = await supabase
+          .from('patients')
+          .select(`
+            id,
+            date_of_birth,
+            medical_history,
+            profiles:id (
+              id,
+              full_name
+            )
+          `);
         
-        // if (error) throw error;
-        // setRegisteredPatients(data || []);
+        if (error) throw error;
         
-        // For now, we'll just use our mock data
-        console.log("Would fetch registered patients from Supabase in a real app");
+        // For demo, we'll add synthetic statuses and conditions
+        const enhancedPatients = (data || []).map((patient, index) => {
+          // Create synthetic data for demonstration
+          const statuses = ['stable', 'follow-up', 'critical', 'emergency'] as const;
+          const randomStatus = statuses[index % statuses.length];
+          
+          const conditions = [
+            ["Hypertension", "Type 2 Diabetes"],
+            ["Asthma"],
+            ["Coronary Artery Disease", "Hypertension"],
+            ["Anxiety", "Migraines"],
+            ["COPD", "Hypertension"]
+          ];
+          
+          const alerts = randomStatus === 'emergency' 
+            ? ["Emergency alert triggered 10 minutes ago"] 
+            : randomStatus === 'critical' 
+              ? ["Irregular heartbeat detected"] 
+              : [];
+              
+          return {
+            id: patient.id,
+            profile_id: patient.profiles.id,
+            full_name: patient.profiles.full_name,
+            date_of_birth: patient.date_of_birth,
+            medical_history: patient.medical_history,
+            status: randomStatus,
+            alerts,
+            conditions: conditions[index % conditions.length]
+          };
+        });
+        
+        setPatients(enhancedPatients);
       } catch (error) {
         console.error("Error fetching patients:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load patients data",
+          variant: "destructive"
+        });
       }
     };
     
-    fetchRegisteredPatients();
-  }, []);
+    fetchPatients();
+  }, [user, toast]);
+  
+  // Fetch appointments
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('appointments')
+          .select(`
+            id,
+            patient_id,
+            appointment_date,
+            appointment_time,
+            reason,
+            status,
+            notes,
+            patients:patient_id (
+              profiles:id (
+                full_name
+              )
+            )
+          `)
+          .eq('doctor_id', user.id);
+        
+        if (error) throw error;
+        
+        const formattedAppointments = (data || []).map(appointment => ({
+          id: appointment.id,
+          patient_id: appointment.patient_id,
+          patient_name: appointment.patients.profiles.full_name,
+          appointment_date: appointment.appointment_date,
+          appointment_time: appointment.appointment_time,
+          reason: appointment.reason,
+          status: appointment.status,
+          notes: appointment.notes
+        }));
+        
+        setAppointments(formattedAppointments);
+      } catch (error) {
+        console.error("Error fetching appointments:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load appointments data",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAppointments();
+  }, [user, toast]);
   
   const filteredPatients = patients.filter(patient => 
-    patient.name.toLowerCase().includes(searchTerm.toLowerCase())
+    patient.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
   
   const startVideoConsultation = (patientName: string) => {
@@ -138,75 +202,86 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ activeTab = 'dashboar
         />
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredPatients.map(patient => (
-          <Card key={patient.id} className={`
-            ${patient.status === 'emergency' ? 'border-red-300 shadow-md' : ''}
-            ${patient.status === 'critical' ? 'border-orange-300' : ''}
-          `}>
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-start">
-                <div className="flex items-center">
-                  <UserCircle className="h-8 w-8 mr-2 text-gray-400" />
-                  <div>
-                    <CardTitle className="text-lg">{patient.name}</CardTitle>
-                    <CardDescription>
-                      {patient.age} years • Last visit: {new Date(patient.lastVisit).toLocaleDateString()}
-                    </CardDescription>
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-lifesage-primary"></div>
+          <p className="mt-2 text-gray-500">Loading patients...</p>
+        </div>
+      ) : filteredPatients.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-gray-500">No patients found.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredPatients.map(patient => (
+            <Card key={patient.id} className={`
+              ${patient.status === 'emergency' ? 'border-red-300 shadow-md' : ''}
+              ${patient.status === 'critical' ? 'border-orange-300' : ''}
+            `}>
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-start">
+                  <div className="flex items-center">
+                    <UserCircle className="h-8 w-8 mr-2 text-gray-400" />
+                    <div>
+                      <CardTitle className="text-lg">{patient.full_name}</CardTitle>
+                      <CardDescription>
+                        {patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'No DOB'} • Last visit: Recent
+                      </CardDescription>
+                    </div>
                   </div>
+                  <StatusBadge status={patient.status || 'stable'} />
                 </div>
-                <StatusBadge status={patient.status} />
-              </div>
-            </CardHeader>
-            <CardContent>
-              {patient.conditions.length > 0 && (
-                <div className="mb-3">
-                  <p className="text-sm font-medium mb-1">Conditions:</p>
-                  <div className="flex flex-wrap gap-1">
-                    {patient.conditions.map((condition, i) => (
-                      <Badge key={i} variant="secondary" className="text-xs">
-                        {condition}
-                      </Badge>
-                    ))}
+              </CardHeader>
+              <CardContent>
+                {patient.conditions && patient.conditions.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-sm font-medium mb-1">Conditions:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {patient.conditions.map((condition, i) => (
+                        <Badge key={i} variant="secondary" className="text-xs">
+                          {condition}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
+                )}
+                
+                {patient.alerts && patient.alerts.length > 0 && (
+                  <div className="mb-3 p-2 bg-red-50 rounded-md">
+                    <p className="text-sm font-medium text-red-800 mb-1">Alerts:</p>
+                    <ul className="text-sm text-red-700">
+                      {patient.alerts.map((alert, i) => (
+                        <li key={i}>{alert}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                <div className="flex space-x-2 mt-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => viewEHR(patient.full_name)}
+                  >
+                    <FileText className="h-4 w-4 mr-1" />
+                    View EHR
+                  </Button>
+                  <Button 
+                    variant={patient.status === 'emergency' ? 'destructive' : 'default'} 
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => startVideoConsultation(patient.full_name)}
+                  >
+                    <Video className="h-4 w-4 mr-1" />
+                    {patient.status === 'emergency' ? 'Urgent Call' : 'Video Call'}
+                  </Button>
                 </div>
-              )}
-              
-              {patient.alerts.length > 0 && (
-                <div className="mb-3 p-2 bg-red-50 rounded-md">
-                  <p className="text-sm font-medium text-red-800 mb-1">Alerts:</p>
-                  <ul className="text-sm text-red-700">
-                    {patient.alerts.map((alert, i) => (
-                      <li key={i}>{alert}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              
-              <div className="flex space-x-2 mt-2">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => viewEHR(patient.name)}
-                >
-                  <FileText className="h-4 w-4 mr-1" />
-                  View EHR
-                </Button>
-                <Button 
-                  variant={patient.status === 'emergency' ? 'destructive' : 'default'} 
-                  size="sm"
-                  className="flex-1"
-                  onClick={() => startVideoConsultation(patient.name)}
-                >
-                  <Video className="h-4 w-4 mr-1" />
-                  {patient.status === 'emergency' ? 'Urgent Call' : 'Video Call'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -214,7 +289,7 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ activeTab = 'dashboar
   const DashboardTabContent = () => (
     <div className="space-y-6">
       {/* Emergency Alerts */}
-      {patients.some(patient => patient.status === "emergency") && (
+      {filteredPatients.some(patient => patient.status === "emergency") && (
         <Card className="bg-red-50 border-red-100">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center text-red-700">
@@ -224,19 +299,19 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ activeTab = 'dashboar
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {patients
+              {filteredPatients
                 .filter(patient => patient.status === "emergency")
                 .map(patient => (
                   <div key={patient.id} className="flex items-center justify-between bg-white p-3 rounded-lg border border-red-200">
                     <div>
-                      <span className="font-medium text-red-800">{patient.name}</span>
+                      <span className="font-medium text-red-800">{patient.full_name}</span>
                       <p className="text-sm text-red-600">
-                        {patient.alerts[0]}
+                        {patient.alerts && patient.alerts[0]}
                       </p>
                     </div>
                     <Button 
                       className="bg-red-600 hover:bg-red-700"
-                      onClick={() => respondToEmergency(patient.name)}
+                      onClick={() => respondToEmergency(patient.full_name)}
                     >
                       Respond Now
                     </Button>
@@ -259,36 +334,57 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ activeTab = 'dashboar
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {appointments.map(appointment => (
-              <div 
-                key={appointment.id} 
-                className={`flex justify-between items-center p-3 rounded-lg border
-                  ${appointment.status === 'active' ? 'bg-green-50 border-green-200' : 'bg-white'}
-                `}
-              >
-                <div>
-                  <div className="flex items-center">
-                    <span className="font-medium">{appointment.patient}</span>
-                    {appointment.status === 'active' && (
-                      <Badge className="ml-2 bg-green-500">In Progress</Badge>
-                    )}
+          {loading ? (
+            <div className="text-center py-4">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-lifesage-primary"></div>
+              <p className="mt-2 text-gray-500">Loading appointments...</p>
+            </div>
+          ) : appointments.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-gray-500">No appointments scheduled for today.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {appointments.map(appointment => {
+                const isToday = new Date(appointment.appointment_date).toDateString() === new Date().toDateString();
+                if (!isToday) return null;
+                
+                return (
+                  <div 
+                    key={appointment.id} 
+                    className={`flex justify-between items-center p-3 rounded-lg border
+                      ${appointment.status === 'active' ? 'bg-green-50 border-green-200' : 'bg-white'}
+                    `}
+                  >
+                    <div>
+                      <div className="flex items-center">
+                        <span className="font-medium">{appointment.patient_name}</span>
+                        {appointment.status === 'active' && (
+                          <Badge className="ml-2 bg-green-500">In Progress</Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        {appointment.reason} • {appointment.appointment_time}
+                      </p>
+                    </div>
+                    <Button 
+                      variant={appointment.status === 'active' ? 'default' : 'outline'} 
+                      size="sm"
+                      onClick={() => startVideoConsultation(appointment.patient_name)}
+                    >
+                      <Video className="h-4 w-4 mr-1" />
+                      {appointment.status === 'active' ? 'Join Now' : 'Start Call'}
+                    </Button>
                   </div>
-                  <p className="text-sm text-gray-500">
-                    {appointment.type} • {appointment.time}
-                  </p>
+                );
+              })}
+              {appointments.filter(a => new Date(a.appointment_date).toDateString() === new Date().toDateString()).length === 0 && (
+                <div className="text-center py-4">
+                  <p className="text-gray-500">No appointments scheduled for today.</p>
                 </div>
-                <Button 
-                  variant={appointment.status === 'active' ? 'default' : 'outline'} 
-                  size="sm"
-                  onClick={() => startVideoConsultation(appointment.patient)}
-                >
-                  <Video className="h-4 w-4 mr-1" />
-                  {appointment.status === 'active' ? 'Join Now' : 'Start Call'}
-                </Button>
-              </div>
-            ))}
-          </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

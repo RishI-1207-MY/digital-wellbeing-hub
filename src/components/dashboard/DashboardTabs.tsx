@@ -8,16 +8,20 @@ import VideoConsultation from '@/components/consultation/VideoConsultation';
 import EnhancedSymptomChecker from './EnhancedSymptomChecker';
 import AppointmentBooking from '@/components/appointments/AppointmentBooking';
 import MedicalReportUpload from '@/components/reports/MedicalReportUpload';
+import { useAuth } from '@/hooks/useAuth';
 
 interface DashboardTabsProps {
   userRole: 'doctor' | 'patient';
 }
 
 const DashboardTabs: React.FC<DashboardTabsProps> = ({ userRole }) => {
+  const { user } = useAuth();
+  
   return (
     <>
       <h1 className="text-2xl font-bold mb-6">
         {userRole === 'doctor' ? 'Provider Dashboard' : 'Patient Dashboard'}
+        {user?.name && <span className="ml-2 text-lg font-normal text-gray-500">Welcome, {user.name}</span>}
       </h1>
       
       {userRole === 'doctor' ? (
@@ -46,10 +50,10 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({ userRole }) => {
         <Tabs defaultValue="dashboard">
           <TabsList className="mb-6 bg-white">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="chat">AI Health Assistant</TabsTrigger>
-            <TabsTrigger value="consultation">Video Consultation</TabsTrigger>
-            <TabsTrigger value="symptom-checker">Symptom Checker</TabsTrigger>
             <TabsTrigger value="appointments">Appointments</TabsTrigger>
+            <TabsTrigger value="consultation">Video Consultation</TabsTrigger>
+            <TabsTrigger value="chat">AI Health Assistant</TabsTrigger>
+            <TabsTrigger value="symptom-checker">Symptom Checker</TabsTrigger>
             <TabsTrigger value="reports">Medical Reports</TabsTrigger>
           </TabsList>
           
@@ -57,20 +61,20 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({ userRole }) => {
             <PatientDashboard />
           </TabsContent>
           
-          <TabsContent value="chat">
-            <HealthChatbot />
+          <TabsContent value="appointments">
+            <AppointmentBooking />
           </TabsContent>
           
           <TabsContent value="consultation">
             <VideoConsultation userRole="patient" />
           </TabsContent>
           
-          <TabsContent value="symptom-checker">
-            <EnhancedSymptomChecker />
+          <TabsContent value="chat">
+            <HealthChatbot />
           </TabsContent>
           
-          <TabsContent value="appointments">
-            <AppointmentBooking />
+          <TabsContent value="symptom-checker">
+            <EnhancedSymptomChecker />
           </TabsContent>
           
           <TabsContent value="reports">

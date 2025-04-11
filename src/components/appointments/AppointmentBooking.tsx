@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -8,14 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
-const doctors = [
-  { id: 1, name: "Dr. Sarah Johnson", specialization: "Cardiology" },
-  { id: 2, name: "Dr. Michael Chen", specialization: "Neurology" },
-  { id: 3, name: "Dr. Emily Rodriguez", specialization: "Pediatrics" },
-  { id: 4, name: "Dr. David Williams", specialization: "Dermatology" },
-  { id: 5, name: "Dr. Jessica Lee", specialization: "Psychiatry" }
-];
+interface Doctor {
+  id: string;
+  specialty: string;
+  full_name: string;
+}
 
 const timeSlots = [
   "9:00 AM", "10:00 AM", "11:00 AM", "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM"
@@ -27,11 +26,50 @@ const AppointmentBooking: React.FC = () => {
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [reason, setReason] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [fetchingDoctors, setFetchingDoctors] = useState(true);
   const { toast } = useToast();
   const { user } = useAuth();
 
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('doctors')
+          .select(`
+            id,
+            specialty,
+            profiles (
+              full_name
+            )
+          `);
+
+        if (error) throw error;
+
+        const formattedDoctors = data.map(doc => ({
+          id: doc.id,
+          specialty: doc.specialty,
+          full_name: doc.profiles.full_name
+        }));
+
+        setDoctors(formattedDoctors);
+      } catch (error) {
+        console.error("Error fetching doctors:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load doctors. Please try again later.",
+          variant: "destructive",
+        });
+      } finally {
+        setFetchingDoctors(false);
+      }
+    };
+
+    fetchDoctors();
+  }, [toast]);
+
   const handleBookAppointment = async () => {
-    if (!selectedDate || !selectedDoctor || !selectedTime || !reason) {
+    if (!selectedDate || !selectedDoctor || !selectedTime || !reason || !user?.id) {
       toast({
         title: "Missing Information",
         description: "Please fill in all fields to book your appointment.",
@@ -43,32 +81,47 @@ const AppointmentBooking: React.FC = () => {
     setLoading(true);
 
     try {
-      // In a real implementation, this would save to the database
-      // For now, we'll just simulate a successful booking
+      // Format date for database
+      const formattedDate = selectedDate.toISOString().split('T')[0];
+
+      // Insert appointment into database
+      const { data, error } = await supabase
+        .from('appointments')
+        .insert({
+          patient_id: user.id,
+          doctor_id: selectedDoctor,
+          appointment_date: formattedDate,
+          appointment_time: selectedTime,
+          reason: reason,
+          status: 'pending'
+        })
+        .select();
+
+      if (error) throw error;
+
+      toast({
+        title: "Appointment Booked!",
+        description: `Your appointment on ${selectedDate.toLocaleDateString()} at ${selectedTime} has been confirmed.`,
+      });
       
-      setTimeout(() => {
-        toast({
-          title: "Appointment Booked!",
-          description: `Your appointment with ${selectedDoctor} on ${selectedDate.toLocaleDateString()} at ${selectedTime} has been confirmed.`,
-        });
-        
-        // Reset form
-        setSelectedDate(undefined);
-        setSelectedDoctor("");
-        setSelectedTime("");
-        setReason("");
-        setLoading(false);
-      }, 1500);
-    } catch (error) {
+      // Reset form
+      setSelectedDate(undefined);
+      setSelectedDoctor("");
+      setSelectedTime("");
+      setReason("");
+    } catch (error: any) {
       console.error("Error booking appointment:", error);
       toast({
         title: "Booking Failed",
-        description: "There was an error booking your appointment. Please try again.",
+        description: error.message || "There was an error booking your appointment. Please try again.",
         variant: "destructive",
       });
+    } finally {
       setLoading(false);
     }
   };
+
+  const selectedDoctorName = doctors.find(d => d.id === selectedDoctor)?.full_name || "";
 
   return (
     <Card>
@@ -79,18 +132,22 @@ const AppointmentBooking: React.FC = () => {
       <CardContent className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="doctor">Select Doctor</Label>
-          <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
-            <SelectTrigger id="doctor">
-              <SelectValue placeholder="Choose a doctor" />
-            </SelectTrigger>
-            <SelectContent>
-              {doctors.map(doctor => (
-                <SelectItem key={doctor.id} value={doctor.name}>
-                  {doctor.name} - {doctor.specialization}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {fetchingDoctors ? (
+            <div className="text-sm text-gray-500">Loading doctors...</div>
+          ) : (
+            <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+              <SelectTrigger id="doctor">
+                <SelectValue placeholder="Choose a doctor" />
+              </SelectTrigger>
+              <SelectContent>
+                {doctors.map(doctor => (
+                  <SelectItem key={doctor.id} value={doctor.id}>
+                    {doctor.full_name} - {doctor.specialty}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         <div className="space-y-2">

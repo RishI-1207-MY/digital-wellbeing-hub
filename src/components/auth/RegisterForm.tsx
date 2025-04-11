@@ -7,6 +7,26 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
+const specialties = [
+  "Cardiology",
+  "Dermatology",
+  "Endocrinology",
+  "Gastroenterology",
+  "Neurology",
+  "Obstetrics and Gynecology",
+  "Oncology",
+  "Ophthalmology",
+  "Orthopedics",
+  "Pediatrics",
+  "Psychiatry",
+  "Pulmonology",
+  "Radiology",
+  "Urology",
+  "General Practice"
+];
 
 const RegisterForm = () => {
   const [name, setName] = useState('');
@@ -14,6 +34,9 @@ const RegisterForm = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [userType, setUserType] = useState('patient');
+  const [specialty, setSpecialty] = useState('');
+  const [experience, setExperience] = useState('');
+  const [bio, setBio] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -33,25 +56,42 @@ const RegisterForm = () => {
     setIsLoading(true);
 
     try {
-      // Simulate API call with timeout
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Create user in Supabase Auth with metadata
+      const metaData = userType === 'doctor' 
+        ? { 
+            name, 
+            role: userType,
+            specialty,
+            experience: parseInt(experience) || 0,
+            bio
+          }
+        : { 
+            name, 
+            role: userType 
+          };
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: metaData
+        }
+      });
       
-      // Store user info in localStorage (would be stored in backend in real app)
-      localStorage.setItem('user', JSON.stringify({ 
-        name, 
-        email, 
-        role: userType 
-      }));
+      if (error) throw error;
       
       toast({
         title: "Registration successful",
         description: "Your account has been created",
       });
+      
+      // The trigger created in the database will automatically insert records into the profiles, doctors, or patients tables
       navigate('/dashboard');
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Registration error:', error);
       toast({
         title: "Registration failed",
-        description: "There was an error creating your account",
+        description: error.message || "There was an error creating your account",
         variant: "destructive",
       });
     } finally {
@@ -124,6 +164,48 @@ const RegisterForm = () => {
               </div>
             </RadioGroup>
           </div>
+          
+          {userType === 'doctor' && (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="specialty">Specialty</Label>
+                <Select value={specialty} onValueChange={setSpecialty} required>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select your specialty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {specialties.map((spec) => (
+                      <SelectItem key={spec} value={spec}>{spec}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="experience">Years of Experience</Label>
+                <Input
+                  id="experience"
+                  type="number"
+                  min="0"
+                  max="70"
+                  placeholder="5"
+                  value={experience}
+                  onChange={(e) => setExperience(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="bio">Professional Bio</Label>
+                <Input
+                  id="bio"
+                  placeholder="Brief description of your professional background"
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                />
+              </div>
+            </>
+          )}
+          
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? 'Creating account...' : 'Create account'}
           </Button>
