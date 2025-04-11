@@ -5,7 +5,7 @@ import PatientDashboard from './PatientDashboard';
 import DoctorDashboard from './DoctorDashboard';
 import HealthChatbot from '@/components/chat/HealthChatbot';
 import VideoConsultation from '@/components/consultation/VideoConsultation';
-import EnhancedSymptomChecker from './EnhancedSymptomChecker';
+import SymptomChecker from './symptom-checker/SymptomChecker';
 import AppointmentBooking from '@/components/appointments/AppointmentBooking';
 import MedicalReportUpload from '@/components/reports/MedicalReportUpload';
 import { useAuth } from '@/hooks/useAuth';
@@ -74,7 +74,7 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({ userRole }) => {
           </TabsContent>
           
           <TabsContent value="symptom-checker">
-            <EnhancedSymptomChecker />
+            <SymptomChecker />
           </TabsContent>
           
           <TabsContent value="reports">
