@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { DoctorWithProfile } from '@/integrations/supabase/types-augmentation';
 
 interface Doctor {
   id: string;
@@ -46,13 +47,15 @@ const AppointmentBooking: React.FC = () => {
 
         if (error) throw error;
 
-        const formattedDoctors = data.map(doc => ({
-          id: doc.id,
-          specialty: doc.specialty,
-          full_name: doc.profiles.full_name
-        }));
+        if (data) {
+          const formattedDoctors = data.map(doc => ({
+            id: doc.id,
+            specialty: doc.specialty,
+            full_name: doc.profiles.full_name
+          }));
 
-        setDoctors(formattedDoctors);
+          setDoctors(formattedDoctors);
+        }
       } catch (error) {
         console.error("Error fetching doctors:", error);
         toast({

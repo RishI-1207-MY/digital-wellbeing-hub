@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { Search, UserCircle, Video, FileText, Bell, Calendar } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { PatientWithProfile, AppointmentWithPatient } from '@/integrations/supabase/types-augmentation';
 
 interface Patient {
   id: string;
@@ -64,39 +65,41 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ activeTab = 'dashboar
         
         if (error) throw error;
         
-        // For demo, we'll add synthetic statuses and conditions
-        const enhancedPatients = (data || []).map((patient, index) => {
-          // Create synthetic data for demonstration
-          const statuses = ['stable', 'follow-up', 'critical', 'emergency'] as const;
-          const randomStatus = statuses[index % statuses.length];
+        if (data) {
+          // For demo, we'll add synthetic statuses and conditions
+          const enhancedPatients = data.map((patient, index) => {
+            // Create synthetic data for demonstration
+            const statuses = ['stable', 'follow-up', 'critical', 'emergency'] as const;
+            const randomStatus = statuses[index % statuses.length];
+            
+            const conditions = [
+              ["Hypertension", "Type 2 Diabetes"],
+              ["Asthma"],
+              ["Coronary Artery Disease", "Hypertension"],
+              ["Anxiety", "Migraines"],
+              ["COPD", "Hypertension"]
+            ];
+            
+            const alerts = randomStatus === 'emergency' 
+              ? ["Emergency alert triggered 10 minutes ago"] 
+              : randomStatus === 'critical' 
+                ? ["Irregular heartbeat detected"] 
+                : [];
+                
+            return {
+              id: patient.id,
+              profile_id: patient.profiles.id,
+              full_name: patient.profiles.full_name,
+              date_of_birth: patient.date_of_birth,
+              medical_history: patient.medical_history,
+              status: randomStatus,
+              alerts,
+              conditions: conditions[index % conditions.length]
+            };
+          });
           
-          const conditions = [
-            ["Hypertension", "Type 2 Diabetes"],
-            ["Asthma"],
-            ["Coronary Artery Disease", "Hypertension"],
-            ["Anxiety", "Migraines"],
-            ["COPD", "Hypertension"]
-          ];
-          
-          const alerts = randomStatus === 'emergency' 
-            ? ["Emergency alert triggered 10 minutes ago"] 
-            : randomStatus === 'critical' 
-              ? ["Irregular heartbeat detected"] 
-              : [];
-              
-          return {
-            id: patient.id,
-            profile_id: patient.profiles.id,
-            full_name: patient.profiles.full_name,
-            date_of_birth: patient.date_of_birth,
-            medical_history: patient.medical_history,
-            status: randomStatus,
-            alerts,
-            conditions: conditions[index % conditions.length]
-          };
-        });
-        
-        setPatients(enhancedPatients);
+          setPatients(enhancedPatients);
+        }
       } catch (error) {
         console.error("Error fetching patients:", error);
         toast({
@@ -136,18 +139,20 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ activeTab = 'dashboar
         
         if (error) throw error;
         
-        const formattedAppointments = (data || []).map(appointment => ({
-          id: appointment.id,
-          patient_id: appointment.patient_id,
-          patient_name: appointment.patients.profiles.full_name,
-          appointment_date: appointment.appointment_date,
-          appointment_time: appointment.appointment_time,
-          reason: appointment.reason,
-          status: appointment.status,
-          notes: appointment.notes
-        }));
-        
-        setAppointments(formattedAppointments);
+        if (data) {
+          const formattedAppointments = data.map(appointment => ({
+            id: appointment.id,
+            patient_id: appointment.patient_id,
+            patient_name: appointment.patients.profiles.full_name,
+            appointment_date: appointment.appointment_date,
+            appointment_time: appointment.appointment_time,
+            reason: appointment.reason,
+            status: appointment.status,
+            notes: appointment.notes
+          }));
+          
+          setAppointments(formattedAppointments);
+        }
       } catch (error) {
         console.error("Error fetching appointments:", error);
         toast({
