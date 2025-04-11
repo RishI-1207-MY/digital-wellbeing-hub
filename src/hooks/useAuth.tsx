@@ -33,7 +33,7 @@ export const useAuth = () => {
             // Get user profile from profiles table
             const { data: profile, error } = await supabase
               .from('profiles')
-              .select('*')
+              .select('id, email, role, full_name, specialty')
               .eq('id', session.user.id)
               .single();
 
@@ -82,7 +82,7 @@ export const useAuth = () => {
         // Get user profile from profiles table
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('*')
+          .select('id, email, role, full_name, specialty')
           .eq('id', session.user.id)
           .single();
 

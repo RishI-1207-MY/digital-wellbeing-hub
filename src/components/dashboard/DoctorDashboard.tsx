@@ -56,7 +56,7 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ activeTab = 'dashboar
             id,
             date_of_birth,
             medical_history,
-            profiles:id (
+            profiles!inner (
               id,
               full_name
             )
@@ -126,8 +126,8 @@ const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ activeTab = 'dashboar
             reason,
             status,
             notes,
-            patients:patient_id (
-              profiles:id (
+            patients!inner (
+              profiles!inner (
                 full_name
               )
             )

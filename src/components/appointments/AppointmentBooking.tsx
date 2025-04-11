@@ -39,7 +39,7 @@ const AppointmentBooking: React.FC = () => {
           .select(`
             id,
             specialty,
-            profiles (
+            profiles!inner (
               full_name
             )
           `);
