@@ -20,40 +20,64 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({ userRole }) => {
         {userRole === 'doctor' ? 'Provider Dashboard' : 'Patient Dashboard'}
       </h1>
       
-      <Tabs defaultValue="dashboard">
-        <TabsList className="mb-6 bg-white">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="chat">AI Health Assistant</TabsTrigger>
-          <TabsTrigger value="consultation">Video Consultation</TabsTrigger>
-          <TabsTrigger value="symptom-checker">Symptom Checker</TabsTrigger>
-          <TabsTrigger value="appointments">Appointments</TabsTrigger>
-          <TabsTrigger value="reports">Medical Reports</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="dashboard">
-          {userRole === 'doctor' ? <DoctorDashboard /> : <PatientDashboard />}
-        </TabsContent>
-        
-        <TabsContent value="chat">
-          <HealthChatbot />
-        </TabsContent>
-        
-        <TabsContent value="consultation">
-          <VideoConsultation />
-        </TabsContent>
-        
-        <TabsContent value="symptom-checker">
-          <EnhancedSymptomChecker />
-        </TabsContent>
-        
-        <TabsContent value="appointments">
-          <AppointmentBooking />
-        </TabsContent>
-        
-        <TabsContent value="reports">
-          <MedicalReportUpload />
-        </TabsContent>
-      </Tabs>
+      {userRole === 'doctor' ? (
+        // Doctor-specific tabs
+        <Tabs defaultValue="dashboard">
+          <TabsList className="mb-6 bg-white">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="patients">My Patients</TabsTrigger>
+            <TabsTrigger value="consultations">Video Consultations</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="dashboard">
+            <DoctorDashboard />
+          </TabsContent>
+          
+          <TabsContent value="patients">
+            <DoctorDashboard activeTab="patients" />
+          </TabsContent>
+          
+          <TabsContent value="consultations">
+            <VideoConsultation userRole="doctor" />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        // Patient-specific tabs
+        <Tabs defaultValue="dashboard">
+          <TabsList className="mb-6 bg-white">
+            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+            <TabsTrigger value="chat">AI Health Assistant</TabsTrigger>
+            <TabsTrigger value="consultation">Video Consultation</TabsTrigger>
+            <TabsTrigger value="symptom-checker">Symptom Checker</TabsTrigger>
+            <TabsTrigger value="appointments">Appointments</TabsTrigger>
+            <TabsTrigger value="reports">Medical Reports</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="dashboard">
+            <PatientDashboard />
+          </TabsContent>
+          
+          <TabsContent value="chat">
+            <HealthChatbot />
+          </TabsContent>
+          
+          <TabsContent value="consultation">
+            <VideoConsultation userRole="patient" />
+          </TabsContent>
+          
+          <TabsContent value="symptom-checker">
+            <EnhancedSymptomChecker />
+          </TabsContent>
+          
+          <TabsContent value="appointments">
+            <AppointmentBooking />
+          </TabsContent>
+          
+          <TabsContent value="reports">
+            <MedicalReportUpload />
+          </TabsContent>
+        </Tabs>
+      )}
     </>
   );
 };
