@@ -1,28 +1,9 @@
 
-import React, { useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import React from 'react';
+import { Link } from 'react-router-dom';
 import LoginForm from '@/components/auth/LoginForm';
 
 const Login = () => {
-  const navigate = useNavigate();
-
-  // Check if user is already logged in
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          navigate('/dashboard');
-        }
-      } catch (error) {
-        console.error('Error checking authentication:', error);
-      }
-    };
-    
-    checkAuth();
-  }, [navigate]);
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-lifesage-light to-white flex flex-col justify-center">
       <div className="text-center mb-8">
@@ -31,7 +12,6 @@ const Login = () => {
           <p className="text-gray-600">Healthcare for everyone, everywhere</p>
         </Link>
       </div>
-
       <LoginForm />
     </div>
   );
