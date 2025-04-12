@@ -66,16 +66,16 @@ const MedicalReportUpload: React.FC = () => {
 
         // Check if user is a doctor and fetch verification status
         if (user.role === 'doctor') {
-          const { data: doctors, error: doctorError } = await supabase
+          const { data, error: doctorError } = await supabase
             .from('doctors')
-            .select('id, verification_status')
+            .select('verification_status')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
             
           if (doctorError) {
             console.error('Error fetching doctor verification status:', doctorError);
-          } else if (doctors) {
-            setVerificationStatus(doctors.verification_status || 'pending');
+          } else if (data) {
+            setVerificationStatus(data.verification_status || 'pending');
           }
         }
       } catch (error) {

@@ -155,6 +155,7 @@ export type Database = {
           experience: number | null
           id: string
           specialty: string
+          verification_status: string
         }
         Insert: {
           availability?: Json | null
@@ -163,6 +164,7 @@ export type Database = {
           experience?: number | null
           id: string
           specialty: string
+          verification_status?: string
         }
         Update: {
           availability?: Json | null
@@ -171,6 +173,7 @@ export type Database = {
           experience?: number | null
           id?: string
           specialty?: string
+          verification_status?: string
         }
         Relationships: [
           {

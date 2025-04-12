@@ -48,14 +48,14 @@ export const useAuth = () => {
               let verificationStatus = undefined;
               
               if (profile.role === 'doctor') {
-                const { data: doctorData, error: doctorError } = await supabase
+                const { data, error: doctorError } = await supabase
                   .from('doctors')
                   .select('verification_status')
                   .eq('id', profile.id)
                   .maybeSingle();
                   
-                if (!doctorError && doctorData) {
-                  verificationStatus = doctorData.verification_status;
+                if (!doctorError && data) {
+                  verificationStatus = data.verification_status;
                 }
               }
               
@@ -160,14 +160,14 @@ export const useAuth = () => {
           let verificationStatus = undefined;
           
           if (profile.role === 'doctor') {
-            const { data: doctorData, error: doctorError } = await supabase
+            const { data, error: doctorError } = await supabase
               .from('doctors')
               .select('verification_status')
               .eq('id', profile.id)
               .maybeSingle();
               
-            if (!doctorError && doctorData) {
-              verificationStatus = doctorData.verification_status;
+            if (!doctorError && data) {
+              verificationStatus = data.verification_status;
             }
           }
           
