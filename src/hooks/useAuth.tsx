@@ -1,21 +1,13 @@
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/components/ui/use-toast';
-
-type User = {
-  id: string;
-  email: string;
-  role: 'patient' | 'doctor';
-  name?: string;
-  specialty?: string;
-  verification_status?: 'pending' | 'approved' | 'rejected';
-};
+import { fetchUserProfile, createUserProfile, User } from '@/services/userProfileService';
+import { useAuthState } from './useAuthState';
 
 export const useAuth = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading, setLoading, updateUser } = useAuthState();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -24,95 +16,34 @@ export const useAuth = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_OUT') {
-          setUser(null);
+          updateUser(null);
           navigate('/login');
           return;
         }
 
         if (session?.user) {
           try {
-            // Check if profile exists for the user
-            const { data: profile, error } = await supabase
-              .from('profiles')
-              .select('id, email, role, full_name, specialty')
-              .eq('id', session.user.id)
-              .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no profile is found
-
-            if (error && error.code !== 'PGRST116') {
-              console.error('Error fetching user profile:', error);
-              throw error;
-            }
-
+            // First try to fetch existing profile
+            const profile = await fetchUserProfile(session.user.id);
+            
             if (profile) {
-              // If the user is a doctor, check verification status
-              let verificationStatus = undefined;
-              
-              if (profile.role === 'doctor') {
-                const { data, error: doctorError } = await supabase
-                  .from('doctors')
-                  .select('verification_status')
-                  .eq('id', profile.id)
-                  .maybeSingle();
-                  
-                if (!doctorError && data) {
-                  verificationStatus = data.verification_status;
-                }
-              }
-              
-              setUser({
-                id: profile.id,
-                email: profile.email,
-                role: profile.role as 'patient' | 'doctor',
-                name: profile.full_name,
-                specialty: profile.specialty || undefined,
-                verification_status: verificationStatus
-              });
+              updateUser(profile);
             } else {
-              // If no profile exists, we'll create one based on user metadata
+              // If no profile exists, create one based on user metadata
               const metadata = session.user.user_metadata;
               if (metadata && metadata.role) {
-                const newProfile = {
-                  id: session.user.id,
+                const newUser = await createUserProfile(session.user.id, {
                   email: session.user.email,
-                  role: metadata.role,
-                  full_name: metadata.name || session.user.email?.split('@')[0] || 'User',
-                  specialty: metadata.specialty || null
-                };
-
-                const { error: insertError } = await supabase
-                  .from('profiles')
-                  .insert(newProfile);
-
-                if (insertError) {
-                  console.error('Error creating user profile:', insertError);
-                  throw insertError;
-                }
-
-                // Also create a record in the patients or doctors table
-                if (metadata.role === 'patient') {
-                  await supabase
-                    .from('patients')
-                    .insert({ id: session.user.id });
-                } else if (metadata.role === 'doctor') {
-                  await supabase
-                    .from('doctors')
-                    .insert({ 
-                      id: session.user.id, 
-                      specialty: metadata.specialty || 'General Practice',
-                      experience: metadata.experience || 0,
-                      bio: metadata.bio || '',
-                      verification_status: 'pending'
-                    });
-                }
-
-                setUser({
-                  id: session.user.id,
-                  email: session.user.email || '',
                   role: metadata.role,
                   name: metadata.name,
                   specialty: metadata.specialty,
-                  verification_status: metadata.role === 'doctor' ? 'pending' : undefined
+                  experience: metadata.experience,
+                  bio: metadata.bio
                 });
+                
+                if (newUser) {
+                  updateUser(newUser);
+                }
               }
             }
           } catch (error) {
@@ -143,88 +74,27 @@ export const useAuth = () => {
       }
       
       try {
-        // Get user profile from profiles table
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('id, email, role, full_name, specialty')
-          .eq('id', session.user.id)
-          .maybeSingle(); // Use maybeSingle instead of single
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('Error fetching user profile:', error);
-          throw error;
-        }
-
+        // Try to fetch existing profile
+        const profile = await fetchUserProfile(session.user.id);
+        
         if (profile) {
-          // If the user is a doctor, check verification status
-          let verificationStatus = undefined;
-          
-          if (profile.role === 'doctor') {
-            const { data, error: doctorError } = await supabase
-              .from('doctors')
-              .select('verification_status')
-              .eq('id', profile.id)
-              .maybeSingle();
-              
-            if (!doctorError && data) {
-              verificationStatus = data.verification_status;
-            }
-          }
-          
-          setUser({
-            id: profile.id,
-            email: profile.email,
-            role: profile.role as 'patient' | 'doctor',
-            name: profile.full_name,
-            specialty: profile.specialty || undefined,
-            verification_status: verificationStatus
-          });
+          updateUser(profile);
         } else {
           // If no profile exists, create one based on user metadata
           const metadata = session.user.user_metadata;
           if (metadata && metadata.role) {
-            const newProfile = {
-              id: session.user.id,
+            const newUser = await createUserProfile(session.user.id, {
               email: session.user.email,
-              role: metadata.role,
-              full_name: metadata.name || session.user.email?.split('@')[0] || 'User',
-              specialty: metadata.specialty || null
-            };
-
-            const { error: insertError } = await supabase
-              .from('profiles')
-              .insert(newProfile);
-
-            if (insertError) {
-              console.error('Error creating user profile:', insertError);
-              throw insertError;
-            }
-
-            // Also create a record in the patients or doctors table
-            if (metadata.role === 'patient') {
-              await supabase
-                .from('patients')
-                .insert({ id: session.user.id });
-            } else if (metadata.role === 'doctor') {
-              await supabase
-                .from('doctors')
-                .insert({ 
-                  id: session.user.id, 
-                  specialty: metadata.specialty || 'General Practice',
-                  experience: metadata.experience || 0,
-                  bio: metadata.bio || '',
-                  verification_status: 'pending'
-                });
-            }
-
-            setUser({
-              id: session.user.id,
-              email: session.user.email || '',
               role: metadata.role,
               name: metadata.name,
               specialty: metadata.specialty,
-              verification_status: metadata.role === 'doctor' ? 'pending' : undefined
+              experience: metadata.experience,
+              bio: metadata.bio
             });
+            
+            if (newUser) {
+              updateUser(newUser);
+            }
           }
         }
       } catch (error) {
@@ -244,7 +114,10 @@ export const useAuth = () => {
     return () => {
       subscription?.unsubscribe();
     };
-  }, [navigate, toast]);
+  }, [navigate, toast, updateUser, setLoading]);
 
   return { user, loading };
 };
+
+// Re-export the User type for convenience
+export type { User };

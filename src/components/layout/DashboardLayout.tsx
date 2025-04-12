@@ -1,18 +1,14 @@
-
 import React, { ReactNode, useState } from 'react';
 import { LogOut, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { User } from '@/services/userProfileService';
 
 type DashboardLayoutProps = {
   children: ReactNode;
-  user: {
-    email: string;
-    role: 'patient' | 'doctor';
-    name?: string;
-  } | null;
+  user: User | null;
   loading: boolean;
 };
 
