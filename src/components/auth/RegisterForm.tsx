@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UploadCloud } from 'lucide-react';
 
 const specialties = [
   "Cardiology",
@@ -36,10 +37,16 @@ const RegisterForm = () => {
   const [userType, setUserType] = useState('patient');
   const [specialty, setSpecialty] = useState('');
   const [experience, setExperience] = useState('');
-  const [bio, setBio] = useState('');
+  const [degree, setDegree] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setDegree(e.target.files[0]);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,23 +60,32 @@ const RegisterForm = () => {
       return;
     }
 
+    if (userType === 'doctor' && !specialty) {
+      toast({
+        title: "Missing Information",
+        description: "Please select your specialty",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Create user in Supabase Auth with metadata
+      // Create metadata for user
       const metaData = userType === 'doctor' 
         ? { 
             name, 
             role: userType,
             specialty,
-            experience: parseInt(experience) || 0,
-            bio
+            experience: parseInt(experience) || 0
           }
         : { 
             name, 
             role: userType 
           };
 
+      // Create user in Supabase Auth with metadata
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -79,6 +95,29 @@ const RegisterForm = () => {
       });
       
       if (error) throw error;
+      
+      // If it's a doctor and they've uploaded a degree file, store it
+      if (userType === 'doctor' && degree && data.user) {
+        const userId = data.user.id;
+        const fileName = `${userId}_degree_verification.${degree.name.split('.').pop()}`;
+        
+        const { error: uploadError } = await supabase
+          .storage
+          .from('doctor_verifications')
+          .upload(fileName, degree, {
+            cacheControl: '3600',
+            upsert: true
+          });
+        
+        if (uploadError) {
+          console.error('Error uploading degree:', uploadError);
+          toast({
+            title: "Warning",
+            description: "Your account was created, but there was an issue uploading your degree verification. Please upload it later in your profile.",
+            variant: "destructive",
+          });
+        }
+      }
       
       toast({
         title: "Registration successful",
@@ -195,13 +234,31 @@ const RegisterForm = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="bio">Professional Bio</Label>
-                <Input
-                  id="bio"
-                  placeholder="Brief description of your professional background"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                />
+                <Label htmlFor="degree-upload">Degree Verification</Label>
+                <div className="border-2 border-dashed rounded-md p-6 flex flex-col items-center justify-center bg-gray-50">
+                  <UploadCloud className="h-8 w-8 text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-500 mb-2">Upload your medical degree or certification</p>
+                  <p className="text-xs text-gray-400 mb-4">PDF, JPG or PNG up to 10MB</p>
+                  <Input
+                    id="degree-upload"
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    className="hidden"
+                    onChange={handleFileChange}
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => document.getElementById('degree-upload')?.click()}
+                  >
+                    Select File
+                  </Button>
+                  {degree && (
+                    <p className="mt-2 text-sm text-gray-700">
+                      {degree.name} ({Math.round(degree.size / 1024)} KB)
+                    </p>
+                  )}
+                </div>
               </div>
             </>
           )}

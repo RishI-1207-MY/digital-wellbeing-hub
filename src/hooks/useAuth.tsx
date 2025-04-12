@@ -30,14 +30,14 @@ export const useAuth = () => {
 
         if (session?.user) {
           try {
-            // Get user profile from profiles table
+            // Check if profile exists for the user
             const { data: profile, error } = await supabase
               .from('profiles')
               .select('id, email, role, full_name, specialty')
               .eq('id', session.user.id)
-              .single();
+              .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no profile is found
 
-            if (error) {
+            if (error && error.code !== 'PGRST116') {
               console.error('Error fetching user profile:', error);
               throw error;
             }
@@ -50,12 +50,57 @@ export const useAuth = () => {
                 name: profile.full_name,
                 specialty: profile.specialty || undefined
               });
+            } else {
+              // If no profile exists, we'll create one based on user metadata
+              const metadata = session.user.user_metadata;
+              if (metadata && metadata.role) {
+                const newProfile = {
+                  id: session.user.id,
+                  email: session.user.email,
+                  role: metadata.role,
+                  full_name: metadata.name || session.user.email?.split('@')[0] || 'User',
+                  specialty: metadata.specialty || null
+                };
+
+                const { error: insertError } = await supabase
+                  .from('profiles')
+                  .insert(newProfile);
+
+                if (insertError) {
+                  console.error('Error creating user profile:', insertError);
+                  throw insertError;
+                }
+
+                // Also create a record in the patients or doctors table
+                if (metadata.role === 'patient') {
+                  await supabase
+                    .from('patients')
+                    .insert({ id: session.user.id });
+                } else if (metadata.role === 'doctor') {
+                  await supabase
+                    .from('doctors')
+                    .insert({ 
+                      id: session.user.id, 
+                      specialty: metadata.specialty || 'General Practice',
+                      experience: metadata.experience || 0,
+                      bio: metadata.bio || ''
+                    });
+                }
+
+                setUser({
+                  id: session.user.id,
+                  email: session.user.email || '',
+                  role: metadata.role,
+                  name: metadata.name,
+                  specialty: metadata.specialty
+                });
+              }
             }
           } catch (error) {
-            console.error('Failed to fetch user profile', error);
+            console.error('Failed to fetch or create user profile', error);
             toast({
               title: "Error",
-              description: "Failed to load user profile",
+              description: "Failed to load user profile. Please try logging in again.",
               variant: "destructive",
             });
           }
@@ -84,9 +129,9 @@ export const useAuth = () => {
           .from('profiles')
           .select('id, email, role, full_name, specialty')
           .eq('id', session.user.id)
-          .single();
+          .maybeSingle(); // Use maybeSingle instead of single
 
-        if (error) {
+        if (error && error.code !== 'PGRST116') {
           console.error('Error fetching user profile:', error);
           throw error;
         }
@@ -99,12 +144,57 @@ export const useAuth = () => {
             name: profile.full_name,
             specialty: profile.specialty || undefined
           });
+        } else {
+          // If no profile exists, create one based on user metadata
+          const metadata = session.user.user_metadata;
+          if (metadata && metadata.role) {
+            const newProfile = {
+              id: session.user.id,
+              email: session.user.email,
+              role: metadata.role,
+              full_name: metadata.name || session.user.email?.split('@')[0] || 'User',
+              specialty: metadata.specialty || null
+            };
+
+            const { error: insertError } = await supabase
+              .from('profiles')
+              .insert(newProfile);
+
+            if (insertError) {
+              console.error('Error creating user profile:', insertError);
+              throw insertError;
+            }
+
+            // Also create a record in the patients or doctors table
+            if (metadata.role === 'patient') {
+              await supabase
+                .from('patients')
+                .insert({ id: session.user.id });
+            } else if (metadata.role === 'doctor') {
+              await supabase
+                .from('doctors')
+                .insert({ 
+                  id: session.user.id, 
+                  specialty: metadata.specialty || 'General Practice',
+                  experience: metadata.experience || 0,
+                  bio: metadata.bio || ''
+                });
+            }
+
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+              role: metadata.role,
+              name: metadata.name,
+              specialty: metadata.specialty
+            });
+          }
         }
       } catch (error) {
-        console.error('Failed to fetch user profile', error);
+        console.error('Failed to fetch or create user profile', error);
         toast({
           title: "Error",
-          description: "Failed to load user profile",
+          description: "Failed to load user profile. Please try logging in again.",
           variant: "destructive",
         });
       }
