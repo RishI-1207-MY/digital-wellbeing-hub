@@ -1,36 +1,98 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import VitalsDisplay from './VitalsDisplay';
 import EnhancedSymptomChecker from './EnhancedSymptomChecker';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Bell, MessageCircle, Video, Pill, Calendar, FileUp } from 'lucide-react';
-
-// Mock medication data
-const medications = [
-  { id: 1, name: "Lisinopril", dosage: "10mg", schedule: "Once daily", purpose: "Blood pressure" },
-  { id: 2, name: "Metformin", dosage: "500mg", schedule: "Twice daily with meals", purpose: "Blood sugar" },
-  { id: 3, name: "Atorvastatin", dosage: "20mg", schedule: "Once daily at bedtime", purpose: "Cholesterol" },
-  { id: 4, name: "Levothyroxine", dosage: "50mcg", schedule: "Once daily in the morning", purpose: "Thyroid" }
-];
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 const PatientDashboard = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [emergencyLoading, setEmergencyLoading] = useState(false);
+  const [medications, setMedications] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    const fetchPatientData = async () => {
+      if (!user?.id) return;
+      
+      setIsLoading(true);
+      try {
+        setMedications([
+          { id: 1, name: "Lisinopril", dosage: "10mg", schedule: "Once daily", purpose: "Blood pressure" },
+          { id: 2, name: "Metformin", dosage: "500mg", schedule: "Twice daily with meals", purpose: "Blood sugar" },
+          { id: 3, name: "Atorvastatin", dosage: "20mg", schedule: "Once daily at bedtime", purpose: "Cholesterol" },
+          { id: 4, name: "Levothyroxine", dosage: "50mcg", schedule: "Once daily in the morning", purpose: "Thyroid" }
+        ]);
+        
+        const { data: documentFiles, error: documentsError } = await supabase
+          .storage
+          .from('patient_documents')
+          .list(`${user.id}/`);
+          
+        if (documentsError) {
+          console.error('Error fetching documents:', documentsError);
+          toast({
+            title: "Error",
+            description: "Failed to load your medical documents",
+            variant: "destructive",
+          });
+        } else {
+          setDocuments(documentFiles || []);
+        }
+      } catch (error) {
+        console.error('Error fetching patient data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchPatientData();
+  }, [user, toast]);
   
   const handleEmergencyAlert = () => {
     setEmergencyLoading(true);
     
-    // Simulate API call
-    setTimeout(() => {
-      toast({
-        title: "Emergency Alert Sent",
-        description: "Your healthcare provider has been notified. Stay calm and await contact.",
-        variant: "destructive",
-      });
-      setEmergencyLoading(false);
-    }, 1500);
+    const createEmergencyAlert = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { error } = await supabase
+          .from('consultations')
+          .insert({
+            patient_id: user.id,
+            status: 'emergency',
+          });
+          
+        if (error) throw error;
+        
+        toast({
+          title: "Emergency Alert Sent",
+          description: "Your healthcare provider has been notified. Stay calm and await contact.",
+          variant: "destructive",
+        });
+      } catch (error) {
+        console.error('Error sending emergency alert:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send emergency alert. Please call emergency services directly.",
+          variant: "destructive",
+        });
+      } finally {
+        setEmergencyLoading(false);
+      }
+    };
+    
+    createEmergencyAlert();
   };
 
   const startMentalHealthChat = () => {
@@ -41,7 +103,6 @@ const PatientDashboard = () => {
   };
 
   const startVideoConsultation = () => {
-    // Navigate to the video consultation tab
     const consultationTab = document.querySelector('[data-value="consultation"]');
     if (consultationTab && consultationTab instanceof HTMLElement) {
       consultationTab.click();
@@ -49,7 +110,6 @@ const PatientDashboard = () => {
   };
 
   const goToAppointments = () => {
-    // Navigate to the appointments tab
     const appointmentsTab = document.querySelector('[data-value="appointments"]');
     if (appointmentsTab && appointmentsTab instanceof HTMLElement) {
       appointmentsTab.click();
@@ -57,16 +117,23 @@ const PatientDashboard = () => {
   };
 
   const goToReports = () => {
-    // Navigate to the medical reports tab
     const reportsTab = document.querySelector('[data-value="reports"]');
     if (reportsTab && reportsTab instanceof HTMLElement) {
       reportsTab.click();
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lifesage-primary"></div>
+        <span className="ml-3 text-lg">Loading your health dashboard...</span>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Top Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="bg-red-50 border-red-100">
           <CardHeader className="pb-2">
@@ -131,7 +198,6 @@ const PatientDashboard = () => {
         </Card>
       </div>
 
-      {/* New Feature Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card className="bg-green-50 border-green-100">
           <CardHeader className="pb-2">
@@ -174,12 +240,48 @@ const PatientDashboard = () => {
         </Card>
       </div>
 
-      {/* Vitals Section */}
       <VitalsDisplay />
 
-      {/* Two Column Layout for Remaining Components */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <FileUp className="mr-2 h-5 w-5" />
+            My Medical Documents
+          </CardTitle>
+          <CardDescription>
+            Your recently uploaded medical reports and documents
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {documents.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-gray-500">No documents uploaded yet.</p>
+              <Button variant="outline" className="mt-4" onClick={goToReports}>
+                Upload Your First Document
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {documents.map((doc, index) => (
+                <div key={index} className="flex justify-between items-center p-3 border rounded hover:bg-gray-50">
+                  <div>
+                    <p className="font-medium">{doc.name}</p>
+                    <p className="text-xs text-gray-500">
+                      Uploaded: {new Date(doc.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Button variant="ghost" size="sm">View</Button>
+                </div>
+              ))}
+              <Button variant="outline" className="w-full mt-4" onClick={goToReports}>
+                Upload More Documents
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Medication List */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center">
@@ -213,7 +315,6 @@ const PatientDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Use the updated symptom checker instead of the original one */}
         <EnhancedSymptomChecker />
       </div>
     </div>

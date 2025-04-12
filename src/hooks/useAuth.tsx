@@ -10,6 +10,7 @@ type User = {
   role: 'patient' | 'doctor';
   name?: string;
   specialty?: string;
+  verification_status?: 'pending' | 'approved' | 'rejected';
 };
 
 export const useAuth = () => {
@@ -43,12 +44,28 @@ export const useAuth = () => {
             }
 
             if (profile) {
+              // If the user is a doctor, check verification status
+              let verificationStatus = undefined;
+              
+              if (profile.role === 'doctor') {
+                const { data: doctorData, error: doctorError } = await supabase
+                  .from('doctors')
+                  .select('verification_status')
+                  .eq('id', profile.id)
+                  .maybeSingle();
+                  
+                if (!doctorError && doctorData) {
+                  verificationStatus = doctorData.verification_status;
+                }
+              }
+              
               setUser({
                 id: profile.id,
                 email: profile.email,
                 role: profile.role as 'patient' | 'doctor',
                 name: profile.full_name,
-                specialty: profile.specialty || undefined
+                specialty: profile.specialty || undefined,
+                verification_status: verificationStatus
               });
             } else {
               // If no profile exists, we'll create one based on user metadata
@@ -83,7 +100,8 @@ export const useAuth = () => {
                       id: session.user.id, 
                       specialty: metadata.specialty || 'General Practice',
                       experience: metadata.experience || 0,
-                      bio: metadata.bio || ''
+                      bio: metadata.bio || '',
+                      verification_status: 'pending'
                     });
                 }
 
@@ -92,7 +110,8 @@ export const useAuth = () => {
                   email: session.user.email || '',
                   role: metadata.role,
                   name: metadata.name,
-                  specialty: metadata.specialty
+                  specialty: metadata.specialty,
+                  verification_status: metadata.role === 'doctor' ? 'pending' : undefined
                 });
               }
             }
@@ -137,12 +156,28 @@ export const useAuth = () => {
         }
 
         if (profile) {
+          // If the user is a doctor, check verification status
+          let verificationStatus = undefined;
+          
+          if (profile.role === 'doctor') {
+            const { data: doctorData, error: doctorError } = await supabase
+              .from('doctors')
+              .select('verification_status')
+              .eq('id', profile.id)
+              .maybeSingle();
+              
+            if (!doctorError && doctorData) {
+              verificationStatus = doctorData.verification_status;
+            }
+          }
+          
           setUser({
             id: profile.id,
             email: profile.email,
             role: profile.role as 'patient' | 'doctor',
             name: profile.full_name,
-            specialty: profile.specialty || undefined
+            specialty: profile.specialty || undefined,
+            verification_status: verificationStatus
           });
         } else {
           // If no profile exists, create one based on user metadata
@@ -177,7 +212,8 @@ export const useAuth = () => {
                   id: session.user.id, 
                   specialty: metadata.specialty || 'General Practice',
                   experience: metadata.experience || 0,
-                  bio: metadata.bio || ''
+                  bio: metadata.bio || '',
+                  verification_status: 'pending'
                 });
             }
 
@@ -186,7 +222,8 @@ export const useAuth = () => {
               email: session.user.email || '',
               role: metadata.role,
               name: metadata.name,
-              specialty: metadata.specialty
+              specialty: metadata.specialty,
+              verification_status: metadata.role === 'doctor' ? 'pending' : undefined
             });
           }
         }

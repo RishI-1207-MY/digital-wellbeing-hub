@@ -11,10 +11,12 @@ export const initSupabaseServices = async () => {
       return;
     }
     
+    // Check for both doctor_verifications and patient_documents buckets
     const verificationBucketExists = buckets.some(bucket => bucket.name === 'doctor_verifications');
+    const documentsBucketExists = buckets.some(bucket => bucket.name === 'patient_documents');
     
+    // Create doctor_verifications bucket if it doesn't exist
     if (!verificationBucketExists) {
-      // Create the doctor_verifications bucket if it doesn't exist
       const { error: createError } = await supabase.storage.createBucket('doctor_verifications', {
         public: false,
         fileSizeLimit: 10485760, // 10MB
@@ -24,18 +26,24 @@ export const initSupabaseServices = async () => {
         console.error('Error creating doctor_verifications bucket:', createError);
       } else {
         console.log('Created doctor_verifications bucket');
-        
-        // For newer versions of Supabase, policies are managed differently
-        // We need to get the current session separately now
-        const { data: sessionData } = await supabase.auth.getSession();
-        
-        if (sessionData?.session?.user?.id) {
-          // Add storage policies using proper newer methods
-          // Note: Policies are now typically managed through the Supabase dashboard or SQL
-          console.log('Bucket created successfully. Storage policies can be configured in the Supabase dashboard.');
-        }
       }
     }
+    
+    // Create patient_documents bucket if it doesn't exist
+    if (!documentsBucketExists) {
+      const { error: createError } = await supabase.storage.createBucket('patient_documents', {
+        public: false,
+        fileSizeLimit: 10485760, // 10MB
+      });
+      
+      if (createError) {
+        console.error('Error creating patient_documents bucket:', createError);
+      } else {
+        console.log('Created patient_documents bucket');
+      }
+    }
+    
+    console.log('Supabase storage buckets initialized');
   } catch (err) {
     console.error('Error initializing Supabase services:', err);
   }
