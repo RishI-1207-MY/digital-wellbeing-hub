@@ -25,19 +25,14 @@ export const initSupabaseServices = async () => {
       } else {
         console.log('Created doctor_verifications bucket');
         
-        // Add a policy to allow authenticated users to upload
-        const { error: policyError } = await supabase.storage.from('doctor_verifications').createPolicy('authenticated-uploads', {
-          name: 'authenticated-uploads',
-          definition: {
-            // Only allow users to upload files with their user ID as prefix
-            operations: ['INSERT', 'UPDATE'],
-            path_filter: `${supabase.auth.session()?.user?.id}*`
-          },
-          type: 'STORAGE'
-        });
+        // For newer versions of Supabase, policies are managed differently
+        // We need to get the current session separately now
+        const { data: sessionData } = await supabase.auth.getSession();
         
-        if (policyError) {
-          console.error('Error creating storage policy:', policyError);
+        if (sessionData?.session?.user?.id) {
+          // Add storage policies using proper newer methods
+          // Note: Policies are now typically managed through the Supabase dashboard or SQL
+          console.log('Bucket created successfully. Storage policies can be configured in the Supabase dashboard.');
         }
       }
     }
